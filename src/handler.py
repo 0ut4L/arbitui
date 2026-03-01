@@ -29,7 +29,9 @@ class Handler:
         request = RPCRequest(method=method.value, params=params, id=str(uuid.uuid4()))
         return await self.socket.call(request, kls)
 
-    async def _market(self, volCube: dtos.VolatilityCube, ccy: str):
+    async def _market(
+        self, vol_cube: dtos.VolatilityCube, yield_curves: dtos.Curves, ccy: str
+    ):
         vol_conventions = await db.get_conventions(ccy, self.db_ctx)
         libor_conventions = vol_conventions.libor_rate
         swap_conventions = vol_conventions.swap_rate
@@ -41,15 +43,15 @@ class Handler:
         rates[swap_conventions[1].floating_rate] = floating_rate
 
         curves = {}
-        curves[libor_conventions[1].reset_curve.name] = dtos.ContinuousCompounding(
-            rate=1.0 / 100  # TODO
-        )
-        curves[swap_conventions[1].discount_curve.name] = dtos.ContinuousCompounding(
-            rate=1.0 / 100  # TODO
-        )
-        curves[floating_rate.reset_curve.name] = dtos.ContinuousCompounding(
-            rate=1.0 / 100  # TODO
-        )
+        curves[libor_conventions[1].reset_curve.name] = yield_curves.curves[
+            libor_conventions[1].reset_curve.name
+        ]
+        curves[swap_conventions[1].discount_curve.name] = yield_curves.curves[
+            swap_conventions[1].discount_curve.name
+        ]
+        curves[floating_rate.reset_curve.name] = yield_curves.curves[
+            floating_rate.reset_curve.name
+        ]
 
         fixings = {}
 
@@ -58,7 +60,7 @@ class Handler:
             rates=rates,
             curves=curves,
             fixings=fixings,
-            volatility=volCube,
+            volatility=vol_cube,
             vol_conventions=dtos._VolatilityMarketConventions(
                 libor_rate=libor_conventions[1],
                 swap_rate=swap_conventions[1],
@@ -78,12 +80,13 @@ class Handler:
     async def arbitrage_check(
         self,
         t: date,
-        volCube: dtos.VolatilityCube,
+        vol_cube: dtos.VolatilityCube,
+        curves: dtos.Curves,
         ccy: str,
         tenor: dtos.Period,
         expiry: dtos.Period,
     ) -> dtos.ArbitrageCheck:
-        (market, static) = await self._market(volCube, ccy)
+        (market, static) = await self._market(vol_cube, curves, ccy)
 
         params = dtos.ArbitrageParams(
             t_ref=t,
@@ -99,10 +102,11 @@ class Handler:
     async def arbitrage_matrix(
         self,
         t: date,
-        volCube: dtos.VolatilityCube,
+        vol_cube: dtos.VolatilityCube,
+        curves: dtos.Curves,
         ccy: str,
     ) -> dtos.ArbitrageMatrix:
-        (market, static) = await self._market(volCube, ccy)
+        (market, static) = await self._market(vol_cube, curves, ccy)
 
         params = dtos.ArbitrageMatrixParams(
             t_ref=t, market=market, static=static, currency=ccy
@@ -116,12 +120,13 @@ class Handler:
     async def vol_sampling(
         self,
         t: date,
-        volCube: dtos.VolatilityCube,
+        vol_cube: dtos.VolatilityCube,
+        curves: dtos.Curves,
         ccy: str,
         tenor: dtos.Period,
         expiry: dtos.Period,
     ) -> dtos.VolSampling:
-        (market, static) = await self._market(volCube, ccy)
+        (market, static) = await self._market(vol_cube, curves, ccy)
 
         params = dtos.VolSamplingParams(
             t_ref=t,

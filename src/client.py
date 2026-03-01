@@ -23,6 +23,7 @@ from message import (
     ArbitrageMatrix,
     ClientMsg,
     Conventions,
+    Data,
     GetVolSamples,
     LoadCube,
     Notification,
@@ -30,7 +31,6 @@ from message import (
     Pong,
     Rates,
     ServerMsg,
-    VolaCube,
     VolSamples,
     client_msg_adapter,
     server_msg_adapter,
@@ -128,7 +128,7 @@ async def ws_async(
 
 @dataclass
 class State:
-    cube: Optional[VolaCube] = None
+    data: Optional[Data] = None
     rates: Optional[Rates] = None
     conventions: Optional[Conventions] = None
     matrix: Optional[ArbitrageMatrix] = None
@@ -461,9 +461,9 @@ class Arbitui(App):
             case VolSamples() as samples:
                 log.info("updating vol samples state")
                 self.update_state(lambda s: replace(s, samples=samples))
-            case VolaCube() as cube:
-                log.info(f"received vol cube currency {cube.currency}")
-                self.update_state(lambda s: replace(s, cube=cube))
+            case Data() as data:
+                log.info(f"received vol cube currency {data.currency}")
+                self.update_state(lambda s: replace(s, data=data))
             case Notification(msg=msg, severity=severity):
                 await self.q_toast.put(
                     ToastMessage(msg=msg, severity=severity.to_textual())
@@ -486,11 +486,12 @@ class Arbitui(App):
     async def on_arbitrage_grid_rate_underlying_entered(
         self, event: ArbitrageGrid.RateUnderlyingEntered
     ) -> None:
-        if cube := self.state.cube:
+        if data := self.state.data:
             await self.q_out.put(
                 GetVolSamples(
-                    currency=cube.currency,
-                    vol_cube=cube.cube,
+                    currency=data.currency,
+                    vol_cube=data.cube,
+                    curves=data.curves,
                     tenor=event.tenor,
                     expiry=event.expiry,
                 )

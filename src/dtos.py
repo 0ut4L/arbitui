@@ -247,6 +247,10 @@ class VolatilityCube(Dto):
     cube: dict[Period, VolatilitySurface]
 
 
+class Curves(Dto):
+    curves: dict[str, YieldCurve]
+
+
 class LiborConventions(Dto):
     currency: str
     spot_lag: int
