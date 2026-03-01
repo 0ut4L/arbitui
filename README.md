@@ -26,6 +26,6 @@ uvx git+https://github.com/0ut4L/arbitui
 
 ## Architecture
 
-- **Server**: WebSocket server with SQLite persistence that communicates with the client and bridges to [rates-scope](https://github.com/ramytanios/rates-scope) via JSON-RPC over a Unix domain socket.
+- **Server**: WebSocket server with SQLite persistence that communicates with the client and bridges to [rates-scope](https://github.com/0ut4L/rates-scope) via JSON-RPC over a Unix domain socket.
 
 - **Client**: [Textual](https://github.com/Textualize/textual)-based TUI that connects over WebSocket for interactive data visualization.
