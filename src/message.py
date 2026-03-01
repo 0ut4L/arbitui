@@ -29,12 +29,14 @@ class GetRates(BaseModel):
 class GetArbitrageMatrix(BaseModel):
     currency: str
     vol_cube: dtos.VolatilityCube
+    curves: dtos.Curves
     type: Literal["get_arbitrage_matrix"] = "get_arbitrage_matrix"
 
 
 class GetArbitrageCheck(BaseModel):
     currency: str
     vol_cube: dtos.VolatilityCube
+    curves: dtos.Curves
     tenor: dtos.Period
     expiry: dtos.Period
     type: Literal["get_arbitrage_check"] = "get_arbitrage_check"
@@ -43,6 +45,7 @@ class GetArbitrageCheck(BaseModel):
 class GetVolSamples(BaseModel):
     currency: str
     vol_cube: dtos.VolatilityCube
+    curves: dtos.Curves
     tenor: dtos.Period
     expiry: dtos.Period
     type: Literal["get_vol_samples"] = "get_vol_samples"
@@ -66,9 +69,10 @@ class Pong(BaseModel):
     type: Literal["pong"] = "pong"
 
 
-class VolaCube(BaseModel):
+class Data(BaseModel):
     currency: str
     cube: dtos.VolatilityCube
+    curves: dtos.Curves
     type: Literal["vola_cube"] = "vola_cube"
 
 
@@ -133,7 +137,7 @@ class Notification(BaseModel):
 type ServerMsg = Annotated[
     Union[
         Pong,
-        VolaCube,
+        Data,
         Conventions,
         Rates,
         ArbitrageMatrix,

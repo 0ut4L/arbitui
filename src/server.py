@@ -5,7 +5,6 @@ from asyncio.taskgroups import TaskGroup
 from contextlib import asynccontextmanager
 from datetime import datetime
 from json.decoder import JSONDecodeError
-from lib import Socket
 from typing import List, Tuple
 
 from loguru import logger
@@ -18,11 +17,13 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 import db
 import dtos
 from handler import Handler
+from lib import Socket
 from message import (
     ArbitrageCheck,
     ArbitrageMatrix,
     ClientMsg,
     Conventions,
+    Data,
     GetArbitrageCheck,
     GetArbitrageMatrix,
     GetConventions,
@@ -35,7 +36,6 @@ from message import (
     Rates,
     ServerMsg,
     Severity,
-    VolaCube,
     VolSamples,
     client_msg_adapter,
     server_msg_adapter,
@@ -92,13 +92,15 @@ async def websocket_endpoint(ws: WebSocket):
         return Rates(currency=ccy, libor_rates=libor_rates, swap_rates=swap_rates)
 
     async def get_arbitrage_matrix(
-        ccy: str, vol: dtos.VolatilityCube, handler: Handler
+        ccy: str, vol: dtos.VolatilityCube, curves: dtos.Curves, handler: Handler
     ) -> List[Tuple[dtos.Period, dtos.Period, dtos.ArbitrageCheck]]:
         if not settings.bulk_arbitrage_matrix:
             Q = Queue[Tuple[dtos.Period, dtos.Period, dtos.ArbitrageCheck]]()
 
             async def impl(tenor: dtos.Period, expiry: dtos.Period):
-                check = await handler.arbitrage_check(t, vol, ccy, tenor, expiry)
+                check = await handler.arbitrage_check(
+                    t, vol, curves, ccy, tenor, expiry
+                )
                 await Q.put((tenor, expiry, check))
 
             n = 0
@@ -110,17 +112,18 @@ async def websocket_endpoint(ws: WebSocket):
             return [Q.get_nowait() for _ in range(n)]
 
         else:
-            rsp = await handler.arbitrage_matrix(t, vol, ccy)
+            rsp = await handler.arbitrage_matrix(t, vol, curves, ccy)
             return [(t, e, dtos.ArbitrageCheck(arbitrage=a)) for t, e, a in rsp.matrix]
 
     async def get_vol_sampling(
         ccy: str,
         vol: dtos.VolatilityCube,
+        curves: dtos.Curves,
         tenor: dtos.Period,
         expiry: dtos.Period,
         handler: Handler,
     ) -> dtos.VolSampling:
-        return await handler.vol_sampling(t, vol, ccy, tenor, expiry)
+        return await handler.vol_sampling(t, vol, curves, ccy, tenor, expiry)
 
     async def log_notify_error(msg: str):
         logger.exception(msg)
@@ -135,10 +138,11 @@ async def websocket_endpoint(ws: WebSocket):
             case LoadCube(file_path=path):
                 try:
                     with open(path) as js:
-                        cube_js = json.load(js)
+                        data_js = json.load(js)
 
-                    ccy = cube_js["currency"]
-                    vol = dtos.VolatilityCube.model_validate(cube_js["data"])
+                    ccy = data_js["currency"]
+                    vol = dtos.VolatilityCube.model_validate(data_js["vol"])
+                    curves = dtos.Curves.model_validate(data_js["curves"])
 
                 except ValidationError:
                     await log_notify_error(f"failed to validate json in {path}")
@@ -150,7 +154,7 @@ async def websocket_endpoint(ws: WebSocket):
                     await log_notify_error(f"failed to load {path}")
 
                 else:
-                    await q_out.put(VolaCube(currency=ccy, cube=vol))
+                    await q_out.put(Data(currency=ccy, cube=vol, curves=curves))
 
                     try:
                         conventions = await get_conventions(ccy)
@@ -165,7 +169,7 @@ async def websocket_endpoint(ws: WebSocket):
                         await log_notify_error("failed to return rates")
 
                     try:
-                        matrix = await get_arbitrage_matrix(ccy, vol, handler)
+                        matrix = await get_arbitrage_matrix(ccy, vol, curves, handler)
                         await q_out.put(ArbitrageMatrix(currency=ccy, matrix=matrix))
                     except Exception:
                         await log_notify_error("failed to return arbitrage matrix")
@@ -181,7 +185,7 @@ async def websocket_endpoint(ws: WebSocket):
                     expiry = list(vol.cube[tenor].surface.keys())[0]
                     try:
                         samples = await get_vol_sampling(
-                            ccy, vol, tenor, expiry, handler
+                            ccy, vol, curves, tenor, expiry, handler
                         )
                         await q_out.put(
                             VolSamples(
@@ -210,19 +214,21 @@ async def websocket_endpoint(ws: WebSocket):
                 except Exception as e:
                     logger.exception(f"failed to handle rates request: {e}")
 
-            case GetArbitrageMatrix(currency=ccy, vol_cube=vol):
+            case GetArbitrageMatrix(currency=ccy, vol_cube=vol, curves=curves):
                 try:
-                    matrix = await get_arbitrage_matrix(ccy, vol, handler)
+                    matrix = await get_arbitrage_matrix(ccy, vol, curves, handler)
                     msg_out = ArbitrageMatrix(currency=ccy, matrix=matrix)
                     await q_out.put(msg_out)
                 except Exception as e:
                     logger.exception(f"failed to handle full arbitrage request: {e}")
 
             case GetArbitrageCheck(
-                currency=ccy, vol_cube=vol, tenor=tenor, expiry=expiry
+                currency=ccy, vol_cube=vol, curves=curves, tenor=tenor, expiry=expiry
             ):
                 try:
-                    check = await handler.arbitrage_check(t, vol, ccy, tenor, expiry)
+                    check = await handler.arbitrage_check(
+                        t, vol, curves, ccy, tenor, expiry
+                    )
                     msg_out = ArbitrageCheck(
                         currency=ccy, tenor=tenor, expiry=expiry, check=check
                     )
@@ -230,9 +236,13 @@ async def websocket_endpoint(ws: WebSocket):
                 except Exception as e:
                     logger.exception(f"failed to handle arbitrage request: {e}")
 
-            case GetVolSamples(currency=ccy, vol_cube=vol, tenor=tenor, expiry=expiry):
+            case GetVolSamples(
+                currency=ccy, vol_cube=vol, curves=curves, tenor=tenor, expiry=expiry
+            ):
                 try:
-                    samples = await get_vol_sampling(ccy, vol, tenor, expiry, handler)
+                    samples = await get_vol_sampling(
+                        ccy, vol, curves, tenor, expiry, handler
+                    )
                     msg_out = VolSamples(
                         currency=ccy, tenor=tenor, expiry=expiry, samples=samples
                     )
