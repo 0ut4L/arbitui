@@ -4,7 +4,7 @@ from typing import Annotated, List, Literal, Tuple, Union
 from pydantic import BaseModel, Field
 from pydantic.type_adapter import TypeAdapter
 
-import dtos
+from arbitui import dtos
 
 
 class Ping(BaseModel):

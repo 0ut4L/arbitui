@@ -9,7 +9,7 @@ from typing import Optional
 import aiohttp
 from loguru import logger
 
-from settings import settings
+from arbitui.settings import settings
 
 RELEASES_URL = "https://api.github.com/repos/0ut4L/rates-scope/releases"
 

@@ -9,8 +9,8 @@ from typing import Dict, Literal, Optional, Type
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-import dtos
-from settings import settings
+from arbitui import dtos
+from arbitui.settings import settings
 
 
 class Method(Enum):

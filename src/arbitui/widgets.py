@@ -19,10 +19,10 @@ from textual.widgets._static import Static
 from textual_autocomplete import PathAutoComplete
 from textual_plotext.plotext_plot import PlotextPlot
 
-import dtos
-from dtos import ArbitrageCheck, Period
-from settings import settings
-from transition import Point, get_easing_func, transition
+from arbitui import dtos
+from arbitui.dtos import ArbitrageCheck, Period
+from arbitui.settings import settings
+from arbitui.transition import Point, get_easing_func, transition
 
 
 class _Suggester(Suggester):

@@ -18,8 +18,8 @@ from textual.widget import Widget
 from textual.widgets import DataTable, Footer, Header, Label, Select
 from websockets.exceptions import ConnectionClosed
 
-import dtos
-from message import (
+from arbitui import dtos
+from arbitui.message import (
     ArbitrageMatrix,
     ClientMsg,
     Conventions,
@@ -35,9 +35,9 @@ from message import (
     client_msg_adapter,
     server_msg_adapter,
 )
-from settings import settings
-from theme import rates_terminal_theme
-from widgets import (
+from arbitui.settings import settings
+from arbitui.theme import rates_terminal_theme
+from arbitui.widgets import (
     ArbitrageCell,
     EmptyCell,
     FileBar,

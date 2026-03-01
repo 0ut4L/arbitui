@@ -14,11 +14,11 @@ from starlette.applications import Starlette
 from starlette.routing import WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-import db
-import dtos
-from handler import Handler
-from lib import Socket
-from message import (
+from arbitui import db
+from arbitui import dtos
+from arbitui.handler import Handler
+from arbitui.lib import Socket
+from arbitui.message import (
     ArbitrageCheck,
     ArbitrageMatrix,
     ClientMsg,
@@ -40,7 +40,7 @@ from message import (
     client_msg_adapter,
     server_msg_adapter,
 )
-from settings import settings
+from arbitui.settings import settings
 
 
 async def websocket_endpoint(ws: WebSocket):

@@ -9,7 +9,7 @@ import aiosqlite
 from aiocache import cached
 from loguru import logger
 
-import dtos
+from arbitui import dtos
 
 CREATE_RATE_TABLE = """
     CREATE TABLE IF NOT EXISTS rate (

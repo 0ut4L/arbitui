@@ -6,10 +6,10 @@ from aiocache.decorators import cached
 from loguru import logger
 from pydantic import BaseModel
 
-import db
-import dtos
-from lib import Method, RPCRequest, Socket
-from settings import settings
+from arbitui import db
+from arbitui import dtos
+from arbitui.lib import Method, RPCRequest, Socket
+from arbitui.settings import settings
 
 
 class Handler:
