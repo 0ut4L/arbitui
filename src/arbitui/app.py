@@ -4,6 +4,7 @@ from asyncio.queues import QueueFull
 from dataclasses import dataclass, replace
 from typing import Callable, List, Literal, Optional, Tuple
 
+import loguru
 import websockets
 from pydantic import ValidationError
 from pydantic_core._pydantic_core import PydanticSerializationError
@@ -506,8 +507,11 @@ def main():
     loop = asyncio.new_event_loop()
     processes = loop.run_until_complete(launch_processes())
     app = Arbitui()
-    app.run(loop=loop)
-    for p in processes:
-        if p.returncode is None:
-            p.terminate()
-    loop.stop()
+    try:
+        app.run(loop=loop)
+    finally:
+        for p in processes:
+            if p.returncode is None:
+                loguru.logger.info(f"terminating process {p.pid}")
+                p.terminate()
+        loop.stop()
