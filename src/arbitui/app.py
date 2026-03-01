@@ -502,11 +502,11 @@ class Arbitui(App):
         await self.q_out.put(LoadCube(file_path=event.path))
 
 
-if __name__ == "__main__":
+def main():
     loop = asyncio.new_event_loop()
     processes = loop.run_until_complete(launch_processes())
     app = Arbitui()
-    x = app.run(loop=loop)
+    app.run(loop=loop)
     for p in processes:
         if p.returncode is None:
             p.terminate()

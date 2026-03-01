@@ -24,3 +24,6 @@ dependencies = [
 
 [tool.pyrefly]
 project-includes = ["**/*.py*"]
+
+[project.scripts]
+arbitui = "arbitui:main"
