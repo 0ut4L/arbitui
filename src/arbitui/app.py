@@ -35,6 +35,7 @@ from arbitui.message import (
     client_msg_adapter,
     server_msg_adapter,
 )
+from arbitui.processes import launch_processes
 from arbitui.settings import settings
 from arbitui.theme import rates_terminal_theme
 from arbitui.widgets import (
@@ -502,5 +503,11 @@ class Arbitui(App):
 
 
 if __name__ == "__main__":
+    loop = asyncio.new_event_loop()
+    processes = loop.run_until_complete(launch_processes())
     app = Arbitui()
-    app.run()
+    x = app.run(loop=loop)
+    for p in processes:
+        if p.returncode is None:
+            p.terminate()
+    loop.stop()

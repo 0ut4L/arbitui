@@ -1,5 +1,6 @@
 import asyncio
 from asyncio.subprocess import Process
+from typing import List
 
 from loguru import logger
 
@@ -53,6 +54,13 @@ async def launch_server() -> Process:
         raise
 
 
+async def launch_processes() -> List[Process]:
+    proc0 = await launch_server()
+    proc1 = await launch_native_image()
+    await asyncio.sleep(3)
+    return [proc0, proc1]
+
+
 if __name__ == "__main__":
 
     async def dump_logs(proc: Process):
@@ -74,14 +82,16 @@ if __name__ == "__main__":
         proc.kill()
 
     async def run():
-        await launch_server()
+        # await launch_server()
         # proc = await launch_native_image()
-        # logger.info(f"json-rpc process launched with PID: {proc.pid}")
         # async with TaskGroup() as tg:
         #     tg.create_task(dump_logs(proc))
         #     tg.create_task(stop(proc))
         # await dump_logs(proc)
         # return_code = await proc.wait()
         # logger.info(f"process exited with return code {return_code}")
+
+        await launch_processes()
+        logger.info("processes started")
 
     asyncio.run(run())
