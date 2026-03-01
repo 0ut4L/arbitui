@@ -1,15 +1,10 @@
-import asyncio
 import platform
 import zipfile
-from asyncio.subprocess import Process
-from asyncio.taskgroups import TaskGroup
 from pathlib import Path
 from typing import Optional
 
 import aiohttp
 from loguru import logger
-
-from arbitui.settings import settings
 
 RELEASES_URL = "https://api.github.com/repos/0ut4L/rates-scope/releases"
 
@@ -90,63 +85,3 @@ async def ensure_binary(binary_path: Path) -> bool:
     logger.info("Binary not found, downloading...")
     print(binary_path)
     return await download_binary(binary_path.parents[0])
-
-
-async def launch_binary(binary_dir: Path, binary: str):
-    binary_path = binary_dir / binary
-
-    if not await ensure_binary(binary_path):
-        raise RuntimeError("Failed to obtain rates-scope binary")
-
-    if binary_path.exists():
-        binary_path.chmod(0o755)
-        logger.info(f"Binary installed at {binary_path}")
-    else:
-        logger.error("Binary not found after extraction")
-        raise
-
-    logger.info(f"Launching {binary_path}")
-
-    try:
-        process = await asyncio.create_subprocess_exec(
-            str(binary_path),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        return process
-    except Exception as e:
-        logger.error(f"Failed to launch binary: {e}")
-        raise
-
-
-if __name__ == "__main__":
-
-    async def log(proc: Process):
-        logs_dir = settings.home / "logs"
-        logs_dir.mkdir(parents=True, exist_ok=True)
-        with open(settings.home / "logs" / f"json-rpc-{proc.pid}.txt", "a") as f:
-            while True:
-                if stdout := proc.stdout:
-                    bytes = await stdout.readline()
-                    if not bytes:  # EOF
-                        break
-                    line = bytes.decode("utf-8").rstrip()
-                    f.write(line + "\n")
-                    f.flush()
-
-    async def stop(proc: Process):
-        await asyncio.sleep(3)
-        logger.info(f"terminating process with PID: {proc.pid}")
-        proc.kill()
-
-    async def run():
-        proc = await launch_binary(settings.home / "bin", "json-rpc")
-        logger.info(f"json-rpc process launched with PID: {proc.pid}")
-        async with TaskGroup() as tg:
-            tg.create_task(log(proc))
-            tg.create_task(stop(proc))
-        await log(proc)
-        return_code = await proc.wait()
-        logger.info(f"process exited with return code {return_code}")
-
-    asyncio.run(run())
