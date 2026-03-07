@@ -1,8 +1,7 @@
 import asyncio
-from asyncio import Future
+from asyncio import Future, Task
 from asyncio.locks import Lock, Semaphore
 from asyncio.streams import StreamReader, StreamWriter
-from asyncio.taskgroups import TaskGroup
 from enum import Enum
 from typing import Dict, Literal, Optional, Type
 
@@ -48,6 +47,7 @@ class Socket:
         self._lock: Lock = Lock()
         self._sem: Semaphore = Semaphore(settings.max_requests_in_flight)
         self._pending: Dict[str, Future] = {}
+        self._recv_task: Optional[Task] = None
 
     async def register_and_send(self, request: RPCRequest) -> None:
         if writer := self._writer:
@@ -86,9 +86,7 @@ class Socket:
 
     async def __aenter__(self):
         self._reader, self._writer = await asyncio.open_unix_connection(path=self._path)
-        tg = TaskGroup()
-        await tg.__aenter__()
-        tg.create_task(self.recv_loop())
+        self._recv_task = asyncio.create_task(self.recv_loop())
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -114,6 +112,11 @@ class Socket:
         # async with socket:
         #   ...
         self._pending.clear()
+
+        # cancel recv loop task
+        if recv_task := self._recv_task:
+            if not recv_task.cancelled():
+                recv_task.cancel()
 
     async def call[T: BaseModel](self, request: RPCRequest, kls: Type[T]) -> T:
         await self.register_and_send(request)
