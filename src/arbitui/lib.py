@@ -65,7 +65,8 @@ class Socket:
             while True:
                 line = await reader.readline()
                 if line == b"":
-                    raise RuntimeError("Server closed connection")
+                    logger.warning("Server closed connection")
+                    break
                 try:
                     rsp = RPCResponse.model_validate_json(line)
                 except ValidationError as e:
