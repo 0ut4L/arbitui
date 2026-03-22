@@ -14,8 +14,7 @@ from starlette.applications import Starlette
 from starlette.routing import WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from arbitui import db
-from arbitui import dtos
+from arbitui import db, dtos
 from arbitui.handler import Handler
 from arbitui.lib import Socket
 from arbitui.message import (

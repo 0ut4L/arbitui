@@ -6,8 +6,7 @@ from aiocache.decorators import cached
 from loguru import logger
 from pydantic import BaseModel
 
-from arbitui import db
-from arbitui import dtos
+from arbitui import db, dtos
 from arbitui.lib import Method, RPCRequest, Socket
 from arbitui.settings import settings
 
