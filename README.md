@@ -7,7 +7,7 @@ Terminal-based interest rates volatility arbitrage analysis tool.
 ## Usage
 
 ```bash
-uvx git+https://github.com/0ut4L/arbitui
+uvx git+https://github.com/ramytanios/arbitui
 ```
 
 ## Features
